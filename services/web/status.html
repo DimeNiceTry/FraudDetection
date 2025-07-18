@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Статус ML Сервиса</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .status-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        .status-label {
+            font-weight: 500;
+        }
+        .status-value {
+            padding: 2px 10px;
+            border-radius: 3px;
+        }
+        .status-ok {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ML Сервис</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Вернуться на главную</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            <div class="status-container">
+                <h2>Статус компонентов системы</h2>
+                <div id="status-list">
+                    <div class="loading">Проверка статуса системы...</div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 ML Сервис. Все права защищены.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const statusList = document.getElementById('status-list');
+            
+            try {
+                // Проверяем доступность API
+                const apiResponse = await fetch('/health');
+                const apiStatus = await apiResponse.json();
+                
+                let statusHTML = '';
+                
+                // API статус
+                statusHTML += `
+                    <div class="status-item">
+                        <span class="status-label">API Сервис</span>
+                        <span class="status-value status-ok">Доступен</span>
+                    </div>
+                `;
+                
+                // Статусы компонентов из ответа API
+                if (apiStatus.components) {
+                    // Статус базы данных
+                    const dbStatus = apiStatus.components.database ? 'status-ok' : 'status-error';
+                    const dbText = apiStatus.components.database ? 'Подключено' : 'Ошибка';
+                    statusHTML += `
+                        <div class="status-item">
+                            <span class="status-label">База данных</span>
+                            <span class="status-value ${dbStatus}">${dbText}</span>
+                        </div>
+                    `;
+                    
+                    // Статус RabbitMQ
+                    const mqStatus = apiStatus.components.rabbitmq ? 'status-ok' : 'status-error';
+                    const mqText = apiStatus.components.rabbitmq ? 'Подключено' : 'Ошибка';
+                    statusHTML += `
+                        <div class="status-item">
+                            <span class="status-label">RabbitMQ</span>
+                            <span class="status-value ${mqStatus}">${mqText}</span>
+                        </div>
+                    `;
+                    
+                    // Статус ML Worker
+                    const workerStatus = apiStatus.components.ml_workers ? 'status-ok' : 'status-pending';
+                    const workerText = apiStatus.components.ml_workers || 'Нет активных';
+                    statusHTML += `
+                        <div class="status-item">
+                            <span class="status-label">ML Workers</span>
+                            <span class="status-value ${workerStatus}">${workerText}</span>
+                        </div>
+                    `;
+                }
+                
+                // Версия и время запуска
+                if (apiStatus.version) {
+                    statusHTML += `
+                        <div class="status-item">
+                            <span class="status-label">Версия API</span>
+                            <span class="status-value">${apiStatus.version}</span>
+                        </div>
+                    `;
+                }
+                
+                if (apiStatus.uptime) {
+                    statusHTML += `
+                        <div class="status-item">
+                            <span class="status-label">Время работы</span>
+                            <span class="status-value">${apiStatus.uptime}</span>
+                        </div>
+                    `;
+                }
+                
+                statusList.innerHTML = statusHTML;
+                
+            } catch (error) {
+                // Если API недоступен
+                statusList.innerHTML = `
+                    <div class="status-item">
+                        <span class="status-label">API Сервис</span>
+                        <span class="status-value status-error">Недоступен</span>
+                    </div>
+                    <div class="error">
+                        <p>Не удалось получить статус системы. Пожалуйста, проверьте, запущены ли все компоненты.</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html> 
